@@ -6,11 +6,25 @@
 #include <opencv2/opencv.hpp>   
 #include <opencv2/core/core.hpp>   
 #include <opencv2/highgui/highgui.hpp>  
+#pragma warning(disalbe:4819)
+
 
 using namespace cv;
 
 #define PI 3.14159265359
 
+typedef struct {
+	int r, g, b;
+}int_rgb;
+
+double** DoubleAlloc2(int width, int height)
+{
+	double** tmp;
+	tmp = (double**)calloc(height, sizeof(double*));
+	for (int i = 0; i<height; i++)
+		tmp[i] = (double*)calloc(width, sizeof(double));
+	return(tmp);
+}
 int** IntAlloc2(int width, int height)
 {
 	int** tmp;
@@ -19,7 +33,28 @@ int** IntAlloc2(int width, int height)
 		tmp[i] = (int*)calloc(width, sizeof(int));
 	return(tmp);
 }
+void DoubleFree2(double** image, int width, int height)
+{
+	for (int i = 0; i < height; i++)
+		free(image[i]);
+	free(image);
+}
 void IntFree2(int** image, int width, int height)
+{
+	for (int i = 0; i<height; i++)
+		free(image[i]);
+
+	free(image);
+}
+int_rgb** IntColorAlloc2(int width, int height)
+{
+	int_rgb** tmp;
+	tmp = (int_rgb**)calloc(height, sizeof(int_rgb*));
+	for (int i = 0; i<height; i++)
+		tmp[i] = (int_rgb*)calloc(width, sizeof(int_rgb));
+	return(tmp);
+}
+void IntColorFree2(int_rgb** image, int width, int height)
 {
 	for (int i = 0; i<height; i++)
 		free(image[i]);
@@ -58,6 +93,47 @@ void ImageShow(char* winname, int** image, int width, int height)
 	imshow(winname, img);
 	//waitKey(0);
 }
+int_rgb** ReadColorImage(char* name, int* width, int* height)
+{
+	Mat img = imread(name, IMREAD_COLOR);
+	int_rgb** image = (int_rgb**)IntColorAlloc2(img.cols, img.rows);
+
+	*width = img.cols;
+	*height = img.rows;
+
+	for (int i = 0; i<img.rows; i++)
+		for (int j = 0; j < img.cols; j++) {
+			image[i][j].b = img.at<Vec3b>(i, j)[0];
+			image[i][j].g = img.at<Vec3b>(i, j)[1];
+			image[i][j].r = img.at<Vec3b>(i, j)[2];
+		}
+
+	return(image);
+}
+void WriteColorImage(char* name, int_rgb** image, int width, int height)
+{
+	Mat img(height, width, CV_8UC3);
+	for (int i = 0; i<height; i++)
+		for (int j = 0; j < width; j++) {
+			img.at<Vec3b>(i, j)[0] = (unsigned char)image[i][j].b;
+			img.at<Vec3b>(i, j)[1] = (unsigned char)image[i][j].g;
+			img.at<Vec3b>(i, j)[2] = (unsigned char)image[i][j].r;
+		}
+
+	imwrite(name, img);
+}
+void ColorImageShow(char* winname, int_rgb** image, int width, int height)
+{
+	Mat img(height, width, CV_8UC3);
+	for (int i = 0; i<height; i++)
+		for (int j = 0; j<width; j++) {
+			img.at<Vec3b>(i, j)[0] = (unsigned char)image[i][j].b;
+			img.at<Vec3b>(i, j)[1] = (unsigned char)image[i][j].g;
+			img.at<Vec3b>(i, j)[2] = (unsigned char)image[i][j].r;
+		}
+	imshow(winname, img);
+
+}
 template <typename _TP>
 void ConnectedComponentLabeling(_TP** seg, int width, int height, int** label, int* no_label)
 {
@@ -70,7 +146,7 @@ void ConnectedComponentLabeling(_TP** seg, int width, int height, int** label, i
 			bw.at<unsigned char>(i, j) = (unsigned char)seg[i][j];
 	}
 	Mat labelImage(bw.size(), CV_32S);
-	*no_label = connectedComponents(bw, labelImage, 8); // 0±îÁö Æ÷ÇÔµÈ °¹¼öÀÓ
+	*no_label = connectedComponents(bw, labelImage, 8); // 0ê¹Œì§€ í¬í•¨ëœ ê°¯ìˆ˜ì„
 
 	(*no_label)--;
 
