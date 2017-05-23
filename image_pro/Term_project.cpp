@@ -1,3 +1,5 @@
+//숫자 이미지 인식하여 출력하기
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -21,41 +23,34 @@ void WriteImage(char* name, int** image, int width, int height);
 void ImageShow(char* winname, int** image, int width, int height);
 void CopyImage(int** src, int width, int height, int** dst);
 
-void _BubbleSorting(int* data, int num)
+void PrintNumber(int sum_i[])
 {
-	for (int j = num - 1; j > 0; j--) {
-		for (int i = 0; i < j; i++) {
-			if (data[i + 1] > data[i])
-				SWAP(data[i + 1], data[i]);
-		}
-	}
+	int minError = sum_i[0];
+
+	for (int i = 0; i < 10; i++) 
+		minError = imin(sum_i[i], minError);
+	
+	for (int i = 0; i < 10; i++) 
+		if (sum_i[i] == minError)
+			printf("인식된 숫자는 %d입니다!\n", i);
+	
 }
 
-void TempleteMatching(int** image_final, int width, int height, int** db_image, int bw, int bh, int db_num, int sum_i[])
+void TempleteMatching(int** image_final, int** db_image, int bw, int bh, int db_num, int sum_i[])
 {
 	int errort = 0;
-	int sum = 255 * width * height;
+	int sum = 255 * bw * bh;
+
+	for (int y = 0; y < bh; y++)
+		for (int x = 0; x < bw; x++)
+			errort += abs(image_final[y][x] - db_image[y][x]);
 	
-	for (int y = 1; y < height - 1; y++) {
-		for (int x = 1; x < width - 1; x++) {
-			errort = 0;
-			if ((y < height - bh) && (x < width - bw)) {
-				for (int i = 0; i < bh; i++)
-					for (int j = 0; j < bw; j++) {
-						errort += abs(image_final[y + i][x + j] - db_image[i][j]);
-					}
-				if (errort < sum) {
-					sum = errort;
-					sum_i[db_num] = sum;
-				}
-			}
-		}
-	}
+	sum_i[db_num] = errort;
 }
 
-int B_Interpolation(int** image_out, int height, int width, double y, double x, double ratio)
-{
 
+int B_Interpolation(int** image_out, int height, int width, double y, double x)
+{
 	int _Px = (int)x;
 	int _Py = (int)y;
 
@@ -82,18 +77,16 @@ int B_Interpolation(int** image_out, int height, int width, double y, double x, 
 
 void ResizeImage(int** image_out, int width, int height, int bw, int bh, int** db_image, int db_num, int sum_i[])
 {
-	double ratio = (bw*bh) / (double)(width*height);
+	double ratio_x = bw / (double)width;
+	double ratio_y = bh / (double)height;
 	int** image_final = (int**)IntAlloc2(bw, bh);
 
 	for (int y = 0; y < bh; y++)
 		for (int x = 0; x < bw; x++) {
-			image_final[y][x] = B_Interpolation(image_out, height, width, (double)y / ratio, (double)x / ratio, ratio);
+			image_final[y][x] = B_Interpolation(image_out, height, width, (double)y / ratio_y, (double)x / ratio_x);
 		}
-	ImageShow("final_image", image_final, bw, bh);
-	waitKey(0);
-	IntFree2(image_final, bw, bh);
 
-	TempleteMatching(image_final, width, height, db_image, bw, bh, db_num, sum_i);
+	TempleteMatching(image_final, db_image, bw, bh, db_num, sum_i);
 }
 
 void CuttingImage(int** image, int x1, int x2, int y1, int y2, int i)
@@ -122,8 +115,7 @@ void CuttingImage(int** image, int x1, int x2, int y1, int y2, int i)
 			db[db_num] = (int**)ReadImage(name, &bw, &bh);
 			ResizeImage(image_out, width, height, bw, bh, db[db_num], db_num, sum_i);
 		}
-		printf("에러율 index %d = %d\n", 2, sum_i[2]);
-		waitKey(0);
+		PrintNumber(sum_i);
 	}
 }
 
@@ -145,7 +137,7 @@ void Find_min_max(int** image, int width, int height, int i)
 void main_Term_project()
 {
 	int width, height;
-	int** img = ReadImage("0_resize.bmp", &width, &height);
+	int** img = ReadImage("8_resize.bmp", &width, &height);
 	
 	char name[30];
 	int** db[NUM];
@@ -158,5 +150,9 @@ void main_Term_project()
 	}
 		
 	Find_min_max(img, width, height, -1);
+
+	ImageShow("Number Image", img, width, height);
+	waitKey(0);
+	IntFree2(img, width, height);
 
 }
